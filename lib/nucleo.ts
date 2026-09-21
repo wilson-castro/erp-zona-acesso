@@ -10,7 +10,7 @@ const ACESSO_URL = process.env.ACESSO_URL ?? 'http://127.0.0.1:4010'
  */
 export const nucleo = criarNucleo({
   app: 'acesso',
-  sessao: sessaoArquivo({ dir: process.env.SESSAO_DIR ?? '/tmp/erp-sessoes', modo: 'leitura' }),
+  sessao: sessaoArquivo({ dir: process.env.SESSAO_DIR ?? '/tmp/erp-sessoes' }),
   lerCookieDeSessao: async () => (await cookies()).get('__Host-session')?.value,
   acesso: acessoHttp({ destino: 'gestao-acesso' }),
   destinos: {

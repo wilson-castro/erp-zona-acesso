@@ -1,28 +1,26 @@
+import { FormularioDeAcao, type ResultadoDeAcao } from '@erp/moldura'
 import { nucleo } from '@/lib/nucleo'
 import { exigirModulo } from '@/lib/pagina'
 import { alterarAtribuicao, alterarConcessao, alterarRestricao } from './acoes'
 
 type Catalogo = {
   zonas: string[]
-  modulos: { id: string; zona: string; rotulo: string; prefixo: string; restrito: boolean; perfis: string[] }[]
+  modulos: {
+    id: string; zona: string; rotulo: string; prefixo: string; restrito: boolean
+    perfis: string[]; perfisPossiveis: string[]
+  }[]
   perfis: { id: string; zona: string; rotulo: string }[]
   usuarios: { usuario: string; perfis: string[] }[]
 }
 
-/** Perfil de zona só concede módulo da própria zona (D8); perfil de plataforma, qualquer um. */
-const podeConceder = (perfil: string, modulo: string) =>
-  perfil.startsWith('plataforma.') || perfil.split('.')[0] === modulo.split('.')[0]
-
 /** Um botão que envia `campo = !ligado` junto com os campos fixos que identificam a linha. */
 function Alternar({ acao, fixos, campo, ligado, rotulo }: {
-  acao: (f: FormData) => Promise<void>; fixos: Record<string, string>; campo: string; ligado: boolean; rotulo: string
+  acao: (f: FormData) => Promise<ResultadoDeAcao>; fixos: Record<string, string>; campo: string; ligado: boolean; rotulo: string
 }) {
   return (
-    <form action={acao}>
-      {Object.entries(fixos).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-      <input type="hidden" name={campo} value={String(!ligado)} />
+    <FormularioDeAcao acao={acao} campos={{ ...fixos, [campo]: String(!ligado) }}>
       <button type="submit" aria-pressed={ligado} aria-label={rotulo}>{ligado ? 'Sim' : 'Não'}</button>
-    </form>
+    </FormularioDeAcao>
   )
 }
 
@@ -48,7 +46,7 @@ export default async function GestaoDeAcesso() {
               <td><Alternar acao={alterarRestricao} fixos={{ modulo: m.id }} campo="restrito" ligado={m.restrito} rotulo={`${m.id} restrito`} /></td>
               {cat.perfis.map((p) => (
                 <td key={p.id}>
-                  {podeConceder(p.id, m.id)
+                  {m.perfisPossiveis.includes(p.id)
                     ? <Alternar acao={alterarConcessao} fixos={{ perfil: p.id, modulo: m.id }} campo="conceder"
                         ligado={m.perfis.includes(p.id)} rotulo={`${p.id} concede ${m.id}`} />
                     : null}
