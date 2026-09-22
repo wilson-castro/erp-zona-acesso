@@ -3,7 +3,7 @@ import { cookies, headers } from 'next/headers'
 import { acessoHttp, criarNucleo, sessaoArquivo, sessaoRedis } from '@erp/nucleo'
 import { clienteRedis } from './redis'
 
-const ACESSO_URL = process.env.ACESSO_URL ?? 'http://127.0.0.1:4010'
+const ACESSO_URL = process.env.ACESSO_URL ?? 'http://127.0.0.1:4020'
 
 /**
  * Zona de gestão de acesso. Fala com um domínio só: o de gestão de acesso, que é quem
@@ -20,7 +20,8 @@ export const nucleo = criarNucleo({
   destinos: {
     'gestao-acesso': {
       origem: ACESSO_URL,
-      caminhos: ['/v1/modulos-permitidos', '/v2/eu', '/v1/catalogo', '/v1/concessoes', '/v1/restricoes', '/v1/atribuicoes'],
+      // gestão de acesso v2 (ADR-0014, adendo 1)
+      caminhos: ['/v2/eu', '/v2/unidades', '/v2/pessoas', '/v2/modulos', '/v2/acessos', '/v2/acessos/:id/revogacao'],
       metodos: ['GET', 'POST'], credencial: 'usuario', timeoutMs: 1000,
     },
   },

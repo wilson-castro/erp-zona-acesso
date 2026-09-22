@@ -7,13 +7,12 @@
     "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start -p 3003",
-    "typecheck": "tsc --noEmit",
-    "registrar": "node scripts/registrar-manifesto.ts"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@erp/contratos": "0.3.1",
-    "@erp/moldura": "0.4.0",
-    "@erp/nucleo": "0.8.2",
+    "@erp/contratos": "0.4.0",
+    "@erp/moldura": "0.5.0",
+    "@erp/nucleo": "0.9.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",

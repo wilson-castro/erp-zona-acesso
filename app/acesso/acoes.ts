@@ -3,31 +3,25 @@
 import { nucleo } from '@/lib/nucleo'
 import { acaoProtegida } from '@/lib/pagina'
 
-type Rota = '/v1/concessoes' | '/v1/restricoes' | '/v1/atribuicoes'
+const texto = (f: FormData, k: string) => String(f.get(k) ?? '')
 
-/** Envia ao domínio, que é quem autoriza, e volta para a tela com o resultado num toast. */
-const enviar = (rota: Rota, corpo: Record<string, unknown>, sucesso: string) =>
-  acaoProtegida('acesso.admin', '/acesso', async () => {
-    await nucleo.destino('gestao-acesso').post(rota, { corpo })
+/**
+ * Só quem tem papel administrativo chega a enviar; o domínio decide se esta pessoa pode fazer isto
+ * com aquela outra (escopo, segregação de funções, ninguém se atribui) e responde 404/403 se não.
+ * São POST que registram uma decisão, sem versão a comparar (invariante 6, ADR-0009 decisão 13).
+ */
+const administrar = (enviar: () => Promise<unknown>, sucesso: string) =>
+  acaoProtegida({ administra: true }, '/acesso', async () => {
+    await enviar()
     return { toast: { tipo: 'sucesso', texto: sucesso }, destino: '/acesso' }
   })
 
-const texto = (f: FormData, k: string) => String(f.get(k) ?? '')
-
-export async function alterarConcessao(f: FormData) {
-  return enviar('/v1/concessoes',
-    { perfil: texto(f, 'perfil'), modulo: texto(f, 'modulo'), conceder: texto(f, 'conceder') === 'true' },
-    'Concessão atualizada.')
+export async function concederAcesso(f: FormData) {
+  return administrar(() => nucleo.destino('gestao-acesso').post('/v2/acessos',
+    { corpo: { pessoa: texto(f, 'pessoa'), modulo: texto(f, 'modulo') } }), 'Acesso concedido.')
 }
 
-export async function alterarRestricao(f: FormData) {
-  return enviar('/v1/restricoes',
-    { modulo: texto(f, 'modulo'), restrito: texto(f, 'restrito') === 'true' },
-    'Restrição atualizada.')
-}
-
-export async function alterarAtribuicao(f: FormData) {
-  return enviar('/v1/atribuicoes',
-    { usuario: texto(f, 'usuario'), perfil: texto(f, 'perfil'), atribuir: texto(f, 'atribuir') === 'true' },
-    'Atribuição atualizada.')
+export async function revogarAcesso(f: FormData) {
+  return administrar(() => nucleo.destino('gestao-acesso').post('/v2/acessos/:id/revogacao',
+    { params: { id: texto(f, 'acesso') } }), 'Acesso revogado.')
 }

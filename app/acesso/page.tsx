@@ -1,77 +1,77 @@
-import { FormularioDeAcao, type ResultadoDeAcao } from '@erp/moldura'
+import { FormularioDeAcao } from '@erp/moldura'
 import { nucleo } from '@/lib/nucleo'
-import { exigirModulo } from '@/lib/pagina'
-import { alterarAtribuicao, alterarConcessao, alterarRestricao } from './acoes'
+import { exigirPapel } from '@/lib/pagina'
+import { concederAcesso, revogarAcesso } from './acoes'
 
-type Catalogo = {
-  zonas: string[]
-  modulos: {
-    id: string; zona: string; rotulo: string; prefixo: string; restrito: boolean
-    perfis: string[]; perfisPossiveis: string[]
-  }[]
-  perfis: { id: string; zona: string; rotulo: string }[]
-  usuarios: { usuario: string; perfis: string[] }[]
-}
+type Unidade = { id: string; nome: string }
+type Pessoa = { id: string; nome: string; status: string }
+type Modulo = { id: string; nome: string }
+type Acesso = { id: string; pessoa: string; modulo: string; situacao: string; perfil: string | null }
 
-/** Um botão que envia `campo = !ligado` junto com os campos fixos que identificam a linha. */
-function Alternar({ acao, fixos, campo, ligado, rotulo }: {
-  acao: (f: FormData) => Promise<ResultadoDeAcao>; fixos: Record<string, string>; campo: string; ligado: boolean; rotulo: string
-}) {
-  return (
-    <FormularioDeAcao acao={acao} campos={{ ...fixos, [campo]: String(!ligado) }}>
-      <button type="submit" aria-pressed={ligado} aria-label={rotulo}>{ligado ? 'Sim' : 'Não'}</button>
-    </FormularioDeAcao>
-  )
-}
+/** Acesso que ainda vale ou espera validação: é o que se revoga. */
+const vigente = (a: Acesso) => a.situacao === 'ativo' || a.situacao === 'pendente'
 
-export default async function GestaoDeAcesso() {
-  await exigirModulo('acesso.admin')
-  const cat = (await nucleo.destino('gestao-acesso').get<Catalogo>('/v1/catalogo')).body
-  if (!cat) return <h1>Gestão de acesso</h1>
+/**
+ * Gestão de acesso v2 (ADR-0014, adendo 1): pessoas de uma unidade × módulos. A página só existe
+ * para quem tem papel administrativo (`exigirPapel`); o que cada um vê e pode fazer é o domínio
+ * que decide — a lista de pessoas já vem filtrada pelo escopo de quem pergunta (invariante 9).
+ */
+export default async function GestaoDeAcesso({ searchParams }: { searchParams: Promise<{ unidade?: string }> }) {
+  await exigirPapel()
+  const gestao = nucleo.destino('gestao-acesso')
+  const unidades = (await gestao.get<Unidade[]>('/v2/unidades')).body ?? []
+  const pedida = (await searchParams).unidade
+  const unidade = unidades.find((u) => u.id === pedida) ?? unidades[0]
+  if (!unidade) return <h1>Gestão de acesso</h1>
+
+  const [pessoas, modulos, acessos] = await Promise.all([
+    gestao.get<Pessoa[]>('/v2/pessoas', { query: { unidade: unidade.id } }).then((r) => r.body ?? []),
+    gestao.get<Modulo[]>('/v2/modulos').then((r) => r.body ?? []),
+    gestao.get<Acesso[]>('/v2/acessos').then((r) => r.body ?? []),
+  ])
+  const acessoDe = (p: string, m: string) => acessos.find((a) => a.pessoa === p && a.modulo === m && vigente(a))
 
   return (
     <>
       <h1>Gestão de acesso</h1>
-      <p>Zonas registradas: {cat.zonas.join(', ')}. Cada zona publica o próprio catálogo; a atribuição é feita aqui.</p>
-
-      <h2>Módulos: restrição e perfis que concedem</h2>
-      <table>
-        <thead>
-          <tr><th scope="col">Módulo</th><th scope="col">Restrito</th>{cat.perfis.map((p) => <th key={p.id} scope="col">{p.id}</th>)}</tr>
-        </thead>
-        <tbody>
-          {cat.modulos.map((m) => (
-            <tr key={m.id}>
-              <th scope="row">{m.rotulo} <small>({m.id})</small></th>
-              <td><Alternar acao={alterarRestricao} fixos={{ modulo: m.id }} campo="restrito" ligado={m.restrito} rotulo={`${m.id} restrito`} /></td>
-              {cat.perfis.map((p) => (
-                <td key={p.id}>
-                  {m.perfisPossiveis.includes(p.id)
-                    ? <Alternar acao={alterarConcessao} fixos={{ perfil: p.id, modulo: m.id }} campo="conceder"
-                        ligado={m.perfis.includes(p.id)} rotulo={`${p.id} concede ${m.id}`} />
-                    : null}
-                </td>
-              ))}
-            </tr>
+      <nav aria-label="Unidades">
+        <ul>
+          {unidades.map((u) => (
+            <li key={u.id}>
+              <a href={`/acesso?unidade=${encodeURIComponent(u.id)}`} {...(u.id === unidade.id ? { 'aria-current': 'page' as const } : {})}>{u.nome}</a>
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      </nav>
 
-      <h2>Usuários e perfis</h2>
+      <h2>Acesso a módulos — {unidade.nome}</h2>
       <table>
         <thead>
-          <tr><th scope="col">Usuário</th>{cat.perfis.map((p) => <th key={p.id} scope="col">{p.id}</th>)}</tr>
+          <tr><th scope="col">Pessoa</th>{modulos.map((m) => <th key={m.id} scope="col">{m.nome}</th>)}</tr>
         </thead>
         <tbody>
-          {cat.usuarios.map((u) => (
-            <tr key={u.usuario}>
-              <th scope="row">{u.usuario}</th>
-              {cat.perfis.map((p) => (
-                <td key={p.id}>
-                  <Alternar acao={alterarAtribuicao} fixos={{ usuario: u.usuario, perfil: p.id }} campo="atribuir"
-                    ligado={u.perfis.includes(p.id)} rotulo={`${u.usuario} tem ${p.id}`} />
-                </td>
-              ))}
+          {pessoas.filter((p) => p.status !== 'desligado').map((p) => (
+            <tr key={p.id}>
+              <th scope="row">{p.nome}</th>
+              {modulos.map((m) => {
+                const a = acessoDe(p.id, m.id)
+                return (
+                  <td key={m.id}>
+                    {a
+                      ? (
+                        <FormularioDeAcao acao={revogarAcesso} campos={{ acesso: a.id }}>
+                          {a.situacao}{a.perfil ? ` · ${a.perfil}` : ''}{' '}
+                          <button type="submit" aria-label={`revogar ${m.id} de ${p.id}`}>Revogar</button>
+                        </FormularioDeAcao>
+                      )
+                      : (
+                        <FormularioDeAcao acao={concederAcesso} campos={{ pessoa: p.id, modulo: m.id }}>
+                          <button type="submit" aria-label={`conceder ${m.id} a ${p.id}`}>Conceder</button>
+                        </FormularioDeAcao>
+                      )}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>
