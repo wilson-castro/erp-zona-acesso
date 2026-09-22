@@ -20,7 +20,7 @@ export const nucleo = criarNucleo({
   destinos: {
     'gestao-acesso': {
       origem: ACESSO_URL,
-      caminhos: ['/v1/modulos-permitidos', '/v1/catalogo', '/v1/concessoes', '/v1/restricoes', '/v1/atribuicoes'],
+      caminhos: ['/v1/modulos-permitidos', '/v2/eu', '/v1/catalogo', '/v1/concessoes', '/v1/restricoes', '/v1/atribuicoes'],
       metodos: ['GET', 'POST'], credencial: 'usuario', timeoutMs: 1000,
     },
   },
