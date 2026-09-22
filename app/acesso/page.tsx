@@ -59,7 +59,7 @@ export default async function GestaoDeAcesso({ searchParams }: { searchParams: P
                   <td key={m.id}>
                     {a
                       ? (
-                        <FormularioDeAcao acao={revogarAcesso} campos={{ acesso: a.id }}>
+                        <FormularioDeAcao acao={revogarAcesso} campos={{ acesso: a.id, pessoa: p.id, modulo: m.id }}>
                           {a.situacao}{a.perfil ? ` · ${a.perfil}` : ''}{' '}
                           <button type="submit" aria-label={`revogar ${m.id} de ${p.id}`}>Revogar</button>
                         </FormularioDeAcao>
