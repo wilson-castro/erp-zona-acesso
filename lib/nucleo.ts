@@ -1,6 +1,7 @@
 import 'server-only'
 import { cookies, headers } from 'next/headers'
-import { acessoHttp, criarNucleo, sessaoArquivo } from '@erp/nucleo'
+import { acessoHttp, criarNucleo, sessaoArquivo, sessaoRedis } from '@erp/nucleo'
+import { clienteRedis } from './redis'
 
 const ACESSO_URL = process.env.ACESSO_URL ?? 'http://127.0.0.1:4010'
 
@@ -10,7 +11,8 @@ const ACESSO_URL = process.env.ACESSO_URL ?? 'http://127.0.0.1:4010'
  */
 export const nucleo = criarNucleo({
   app: 'acesso',
-  sessao: sessaoArquivo({ dir: process.env.SESSAO_DIR ?? '/tmp/erp-sessoes' }),
+  // REDIS_URL definido: Redis (showcase, produção); senão, arquivo de desenvolvimento
+  sessao: clienteRedis ? sessaoRedis({ cliente: clienteRedis }) : sessaoArquivo({ dir: process.env.SESSAO_DIR ?? '/tmp/erp-sessoes' }),
   lerCookieDeSessao: async () => (await cookies()).get('__Host-session')?.value,
   // núcleo 8: o proxy pôs um traceparent na requisição; cada chamada ao domínio leva um filho
   lerTraceparent: async () => (await headers()).get('traceparent') ?? undefined,
