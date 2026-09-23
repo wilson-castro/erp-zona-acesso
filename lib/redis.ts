@@ -19,5 +19,17 @@ function clientePreguicoso(url: string): ClienteRedisDeLeitura {
   return { get: async (chave) => (await conectado()).get(chave) }
 }
 
-const url = process.env.REDIS_URL_ZONA ?? process.env.REDIS_URL
+/**
+ * Sem fallback para `REDIS_URL` (auditor_b1_d1_3, V1): essa é a credencial de escrita do shell.
+ * Com `REDIS_URL` e sem `REDIS_URL_ZONA`, a zona se recusa a ler sessão em vez de conectar como o shell.
+ */
+function urlDaZona(): string | undefined {
+  const url = process.env.REDIS_URL_ZONA
+  if (!url && process.env.REDIS_URL) {
+    throw new Error('REDIS_URL definido sem REDIS_URL_ZONA: a zona só conecta com o usuário de leitura (docs/CONFIGURACAO.md)')
+  }
+  return url
+}
+
+const url = urlDaZona()
 export const clienteRedis: ClienteRedisDeLeitura | null = url ? clientePreguicoso(url) : null
