@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { lerHostsDoShell } from './lib/hosts-do-shell'
 
 const config: NextConfig = {
   poweredByHeader: false,
@@ -6,7 +7,7 @@ const config: NextConfig = {
   assetPrefix: '/acesso-static',
   experimental: {
     // A Server Action chega pelo shell: a origem do navegador é a do shell, não a da zona.
-    serverActions: { allowedOrigins: (process.env.SHELL_HOSTS ?? 'localhost:3000').split(',') },
+    serverActions: { allowedOrigins: lerHostsDoShell() },
   },
 }
 
