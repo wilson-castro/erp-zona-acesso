@@ -7,6 +7,7 @@
     "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start -p 3003",
+    "registrar-rota": "node scripts/registrar-rota.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
